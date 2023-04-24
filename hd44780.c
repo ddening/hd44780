@@ -35,14 +35,15 @@ void hd44780_init() {
     
     HD44780_DDR = 0xFF;     // Configure PORT as OUTPUT
     HD44780_PORT = 0x00;    // Set all PINS LOW
-    
-    _hd44780_check_fake_busy();
-    hd44780_send_8_bit_instruction( RSRW00, 0x30 ); // Enable 4 Bit Mode
-    _hd44780_check_fake_busy();
-    hd44780_send_8_bit_instruction( RSRW00, 0x30 ); // Enable 4 Bit Mode
-    _hd44780_check_fake_busy();
-    hd44780_send_8_bit_instruction( RSRW00, 0x30 ); // Enable 4 Bit Mode
-    
+        
+    // Reset Controller by sending 0x30 with different delay intervals inbetween.
+    _delay_ms(15);
+    hd44780_send_8_bit_instruction( RSRW00, 0x30 );
+    _delay_ms(4.1);
+    hd44780_send_8_bit_instruction( RSRW00, 0x30 );
+    _delay_ms(0.1);
+    hd44780_send_8_bit_instruction( RSRW00, 0x30 );
+        
     _hd44780_check_fake_busy();
     hd44780_send_8_bit_instruction( RSRW00, FUNCTION_SET_4_BIT_MODE ); // Enable 4 Bit Mode
     _hd44780_check_fake_busy();
@@ -53,7 +54,7 @@ void hd44780_init() {
 }
 
 void hd44780_send_8_bit_instruction( uint8_t opcode, uint8_t instruction) {
-    HD44780_PORT = instruction| opcode;
+    HD44780_PORT = instruction | opcode;
     HD44780_PORT |= ( 1 << ENABLE_PIN );              
     _delay_us(1);
     HD44780_PORT &= ~( 1 << ENABLE_PIN );              
@@ -64,10 +65,12 @@ void hd44780_send_4_bit_instruction( uint8_t opcode, uint8_t instruction) {
     /* Data Package Layout: D7 D6 D5 D4 X E RW RS, X:= Don't Care */  
     
     HD44780_PORT = (instruction & 0xF0) | opcode;         // Upper Byte
+    _delay_us(1);
     HD44780_PORT |= ( 1 << ENABLE_PIN );                  // Enable ON
     _delay_us(1);
     
     HD44780_PORT = ((instruction & 0x0F) << 4) | opcode ; // Lower Byte
+    _delay_us(1);
     HD44780_PORT &= ~( 1 << ENABLE_PIN );                 // Enable OFF
     _delay_us(1);
     
