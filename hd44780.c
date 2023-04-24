@@ -126,7 +126,7 @@ void hd44780_shift_display_down( void ) {
         CURRENT_STREAM_LINE++;
     }
     
-    w204_update( stream_out );
+    hd44780_update( stream_out );
 }
 
 void hd44780_clear( void ) {
