@@ -33,12 +33,13 @@
 #define HD44780_H_
 
 /* HD44780 */
-#define LINE_COUNT  0x04
+#define LINE_COUNT  0x02
 #define LINE_LENGTH 0x14
 #define LINE1	0x00
 #define LINE2	LINE1 + 0x40
 #define LINE3	LINE1 + LINE_LENGTH
 #define	LINE4 	LINE2 + LINE_LENGTH
+#define DDRAM_ADDR 0x80
 
 #define RS_PIN       0x00
 #define RW_PIN       0x01
@@ -100,10 +101,16 @@ typedef struct stream_out_t {
 void hd44780_init( void );
 void hd44780_set_stream_out( stream_out_t* stream );
 void hd44780_puts( char* string );
-void hd44780_put_stream( char* string );
 void hd44780_update( stream_out_t* stream );
 void hd44780_clear( void );
 void hd44780_send_8_bit_instruction( uint8_t opcode, uint8_t instruction);
 void hd44780_send_4_bit_instruction( uint8_t, uint8_t );
+void hd44780_move_cursor( uint8_t, uint8_t );
+void hd44780_shift_cursor_left( void );
+void hd44780_shift_cursor_right( void );
+void hd44780_shift_display_left( void );
+void hd44780_shift_display_right( void );
+void hd44780_shift_display_up( void );
+void hd44780_shift_display_down( void );
 
 #endif /* HD44780_H_ */

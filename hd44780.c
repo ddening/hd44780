@@ -93,14 +93,77 @@ void hd44780_puts( char* string ) {
     }
 }
 
-void hd44780_put_stream( char* stream ) {
+void hd44780_move_cursor( uint8_t line, uint8_t offset ) {
+    hd44780_send_4_bit_instruction( RSRW00, DDRAM_ADDR + line + offset );
+}
+
+void hd44780_shift_cursor_left( void ) {
+    hd44780_send_4_bit_instruction( RSRW00, SHIFT_INSTRUCTION | SHIFT_CURSOR_LEFT );
+}
+
+void hd44780_shift_cursor_right( void ) {
+    hd44780_send_4_bit_instruction( RSRW00, SHIFT_INSTRUCTION | SHIFT_CURSOR_RIGHT );
+}
+
+void hd44780_shift_display_left( void ) {
+    hd44780_send_4_bit_instruction( RSRW00, SHIFT_INSTRUCTION | SHIFT_DISPLAY_LEFT );
+}
+
+void hd44780_shift_display_right( void ) {
+    hd44780_send_4_bit_instruction( RSRW00, SHIFT_INSTRUCTION | SHIFT_DISPLAY_RIGHT);
+}
+
+void hd44780_shift_display_up( void ) {
+    if ( CURRENT_STREAM_LINE != 0 ) {
+        CURRENT_STREAM_LINE--;
+    }
+    
+    hd44780_update( stream_out );
+}
+
+void hd44780_shift_display_down( void ) {
+    if ( CURRENT_STREAM_LINE != (MAX_OUTPUT_STREAMS - LINE_COUNT ) ) {
+        CURRENT_STREAM_LINE++;
+    }
+    
+    w204_update( stream_out );
 }
 
 void hd44780_clear( void ) {
+    hd44780_send_4_bit_instruction( RSRW00, CLEAR_DISPLAY );
 }
 
 void hd44780_update( stream_out_t* stream ) {
 	
+    if ( stream == NULL ) {
+        return;
+    }
+    
+    if ( CURRENT_STREAM_LINE > MAX_OUTPUT_STREAMS - LINE_COUNT ||
+         CURRENT_STREAM_LINE < 0 ) {
+        return;
+    }
+    
+    char* _stream[MAX_OUTPUT_STREAMS] = {
+        stream->data0,
+        stream->data1,
+        stream->data2,
+        stream->data3,
+        stream->data4,
+        stream->data5
+    };
+    
+    uint8_t _stream_line[LINE_COUNT] = { LINE1, LINE2 };
+    
+    uint8_t _CURRENT_STREAM_LINE_ = CURRENT_STREAM_LINE;
+    
+    // hd44780_clear(); // -> Doesn't work with hd44780_put_stream yet. Produces wrong line output instead of resetting to addr. 0
+    
+    for (uint8_t line = 0; line < LINE_COUNT; line++) {
+        hd44780_move_cursor( _stream_line[line], 0 );
+        hd44780_puts( _stream[_CURRENT_STREAM_LINE_] );
+        _CURRENT_STREAM_LINE_++;
+    }
 }
 
 void hd44780_set_stream_out( stream_out_t* stream ) {
