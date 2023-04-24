@@ -40,6 +40,19 @@
 #define LINE3	LINE1 + LINE_LENGTH
 #define	LINE4 	LINE2 + LINE_LENGTH
 
+#define RS_PIN       0x00
+#define RW_PIN       0x01
+#define ENABLE_PIN   0x02
+#define HD44780_DDR  DDRA
+#define HD44780_PORT PORTA
+
+/* OPCODE */
+#define RSRW00 0x00
+#define RSRW01 0x01
+#define RSRW10 0x02
+#define RSRW11 0x03
+#define WRITE_TEST_CHAR 0x48
+
 /* DISPLAY CONTROL */
 #define DISPLAY_OFF     0x08    
 #define DISPLAY_ON      0x0C 
@@ -49,8 +62,7 @@
 #define RETURN_HOME     0x02
 
 /* FUNCTION SET DEFINITION (EUROPEAN ONLY) */
-#define FUNCTION_SET_EUROPEAN   0x39 // 2 a. 4 line display
-#define FUNCTION_SET_EUROPEAN_2 0x3B // 2 a. 4 line display
+#define FUNCTION_SET_4_BIT_MODE   0x28 // 4 Bit Mode, 2 Lines, 5x8 Dots, 0x20 := Only 4 Bit Set
 
 /* ENTRY MODE SET */
 #define CURSOR_DIR_LEFT_SHIFT     0x07
@@ -85,13 +97,13 @@ typedef struct stream_out_t {
 } stream_out_t;
 
 /* Function Prototypes */
-void hd44780_init( uint8_t );
+void hd44780_init( void );
 void hd44780_set_stream_out( stream_out_t* stream );
 void hd44780_puts( char* string );
 void hd44780_put_stream( char* string );
 void hd44780_update( stream_out_t* stream );
 void hd44780_clear( void );
-void hd44780_send_8_bit_instruction( uint8_t );
-void hd44780_send_4_bit_instruction( uint8_t );
+void hd44780_send_8_bit_instruction( uint8_t opcode, uint8_t instruction);
+void hd44780_send_4_bit_instruction( uint8_t, uint8_t );
 
 #endif /* HD44780_H_ */

@@ -26,17 +26,17 @@ int main( void ) {
      
     sei();
     
-    hd44780_init( SPI_TEST_PORT );  
+    hd44780_init();  
     // hd44780_move_cursor(LINE1, 0);
-    hd44780_puts("Hello AVR");
+    // hd44780_puts("Hello AVR");
     
     /* Fill Test Stream With Data */
-    sprintf(stream_out.data0, "SENSOR00");
-    sprintf(stream_out.data1, "SENSOR01");
-    sprintf(stream_out.data2, "SENSOR02");
-    sprintf(stream_out.data3, "SENSOR03");
-    sprintf(stream_out.data4, "SENSOR04");
-    sprintf(stream_out.data5, "SENSOR05");
+    //sprintf(stream_out.data0, "SENSOR00");
+    //sprintf(stream_out.data1, "SENSOR01");
+    //sprintf(stream_out.data2, "SENSOR02");
+    //sprintf(stream_out.data3, "SENSOR03");
+    //sprintf(stream_out.data4, "SENSOR04");
+    //sprintf(stream_out.data5, "SENSOR05");
             
    while (1) { /* Busy-wait forever. */ }
 }
