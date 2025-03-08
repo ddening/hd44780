@@ -69,7 +69,7 @@ static int test_case_run(const struct test_case* test) {
 	return result;
 }
 
-int test_suite_run(const struct test_suite* suite) {
+int test_hd44780_suite_run(const struct test_suite* suite) {
 	unsigned int nr_failures = 0;
 	unsigned int nr_errors = 0;
 	unsigned int i;

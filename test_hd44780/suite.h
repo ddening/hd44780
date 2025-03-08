@@ -80,6 +80,6 @@ struct test_suite {
 # define ARRAY_LEN(a) (sizeof(a) / sizeof((a)[0]))
 #endif
 
-int test_suite_run(const struct test_suite* suite);
+int test_hd44780_suite_run(const struct test_suite* suite);
 
 #endif /* TEST_SUITE_H_INCLUDED */

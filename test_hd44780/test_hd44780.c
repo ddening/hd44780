@@ -16,7 +16,7 @@
 
 static stream_out_t stream_out;
 
-int main( void ) {
+void test_hd44780(void) {
     
     cli(); 
          
@@ -37,6 +37,4 @@ int main( void ) {
     //sprintf(stream_out.data3, "SENSOR03");
     //sprintf(stream_out.data4, "SENSOR04");
     //sprintf(stream_out.data5, "SENSOR05");
-            
-   while (1) { /* Busy-wait forever. */ }
 }
