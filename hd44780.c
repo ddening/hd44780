@@ -38,19 +38,18 @@ void hd44780_init() {
         
     // Reset Controller by sending 0x30 with different delay intervals inbetween.
     _delay_ms(15);
-    hd44780_send_8_bit_instruction( RSRW00, 0x30 );
+    hd44780_send_8_bit_instruction( RWRS00, 0x30 );
     _delay_ms(4.1);
-    hd44780_send_8_bit_instruction( RSRW00, 0x30 );
+    hd44780_send_8_bit_instruction( RWRS00, 0x30 );
     _delay_ms(0.1);
-    hd44780_send_8_bit_instruction( RSRW00, 0x30 );
+    hd44780_send_8_bit_instruction( RWRS00, 0x30 );
         
     _hd44780_check_fake_busy();
-    hd44780_send_8_bit_instruction( RSRW00, FUNCTION_SET_4_BIT_MODE ); // Enable 4 Bit Mode
+    hd44780_send_8_bit_instruction( RWRS00, FUNCTION_SET_4_BIT_MODE ); // Enable 4 Bit Mode
     _hd44780_check_fake_busy();
-    hd44780_send_4_bit_instruction( RSRW00, FUNCTION_SET_4_BIT_MODE ); // Define Function Set
-    hd44780_send_4_bit_instruction( RSRW00, DISPLAY_ON | CURSOR_ON | BLINK_ON );
-    hd44780_send_4_bit_instruction( RSRW00, CURSOR_DIR_LEFT_NO_SHIFT );
-    hd44780_send_4_bit_instruction( RSRW11, WRITE_TEST_CHAR );
+    hd44780_send_4_bit_instruction( RWRS00, FUNCTION_SET_4_BIT_MODE ); // Define Function Set
+    hd44780_send_4_bit_instruction( RWRS00, DISPLAY_ON | CURSOR_ON | BLINK_ON );
+    hd44780_send_4_bit_instruction( RWRS00, CURSOR_DIR_LEFT_NO_SHIFT );
 }
 
 void hd44780_send_8_bit_instruction( uint8_t opcode, uint8_t instruction) {
@@ -97,23 +96,23 @@ void hd44780_puts( char* string ) {
 }
 
 void hd44780_move_cursor( uint8_t line, uint8_t offset ) {
-    hd44780_send_4_bit_instruction( RSRW00, DDRAM_ADDR + line + offset );
+    hd44780_send_4_bit_instruction( RWRS00, DDRAM_ADDR + line + offset );
 }
 
 void hd44780_shift_cursor_left( void ) {
-    hd44780_send_4_bit_instruction( RSRW00, SHIFT_INSTRUCTION | SHIFT_CURSOR_LEFT );
+    hd44780_send_4_bit_instruction( RWRS00, SHIFT_INSTRUCTION | SHIFT_CURSOR_LEFT );
 }
 
 void hd44780_shift_cursor_right( void ) {
-    hd44780_send_4_bit_instruction( RSRW00, SHIFT_INSTRUCTION | SHIFT_CURSOR_RIGHT );
+    hd44780_send_4_bit_instruction( RWRS00, SHIFT_INSTRUCTION | SHIFT_CURSOR_RIGHT );
 }
 
 void hd44780_shift_display_left( void ) {
-    hd44780_send_4_bit_instruction( RSRW00, SHIFT_INSTRUCTION | SHIFT_DISPLAY_LEFT );
+    hd44780_send_4_bit_instruction( RWRS00, SHIFT_INSTRUCTION | SHIFT_DISPLAY_LEFT );
 }
 
 void hd44780_shift_display_right( void ) {
-    hd44780_send_4_bit_instruction( RSRW00, SHIFT_INSTRUCTION | SHIFT_DISPLAY_RIGHT);
+    hd44780_send_4_bit_instruction( RWRS00, SHIFT_INSTRUCTION | SHIFT_DISPLAY_RIGHT);
 }
 
 void hd44780_shift_display_up( void ) {
@@ -133,7 +132,7 @@ void hd44780_shift_display_down( void ) {
 }
 
 void hd44780_clear( void ) {
-    hd44780_send_4_bit_instruction( RSRW00, CLEAR_DISPLAY );
+    hd44780_send_4_bit_instruction( RWRS00, CLEAR_DISPLAY );
 }
 
 void hd44780_update( stream_out_t* stream ) {

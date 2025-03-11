@@ -48,11 +48,10 @@
 #define HD44780_PORT PORTA
 
 /* OPCODE */
-#define RSRW00 0x00
-#define RSRW01 0x01
-#define RSRW10 0x02
-#define RSRW11 0x03
-#define WRITE_TEST_CHAR 0x48
+#define RWRS00 0x00
+#define RWRS01 0x01
+#define RWRS10 0x02
+#define RWRS11 0x03
 
 /* DISPLAY CONTROL */
 #define DISPLAY_OFF     0x08    
