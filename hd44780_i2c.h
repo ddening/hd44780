@@ -50,15 +50,10 @@
 #define ENABLE_PIN   0x02
 
 /* OPCODE */
-//#define RSRW00 0x00
-//#define RSRW01 0x01
-//#define RSRW10 0x02
-//#define RSRW11 0x03
 #define RWRS00 0x00
 #define RWRS01 0x01
 #define RWRS10 0x02
 #define RWRS11 0x03
-#define WRITE_TEST_CHAR 0x48
 
 /* DISPLAY CONTROL */
 #define DISPLAY_OFF     0x08
@@ -67,6 +62,7 @@
 #define BLINK_ON        0x09    // 0b00001001 -> sets display off
 #define CLEAR_DISPLAY   0x01
 #define RETURN_HOME     0x02
+#define BUSY_FLAG		0x80	//0b10000000
 
 /* FUNCTION SET DEFINITION (EUROPEAN ONLY) */
 #define FUNCTION_SET_4_BIT_MODE   0x28 // 4 Bit Mode, 2 Lines, 5x8 Dots, 0x20 := Only 4 Bit Set
@@ -91,10 +87,31 @@
 #define SHIFT_DISPLAY_RIGHT 0x0C
 
 /* Typdef for Display Output */
-#define MAX_CHAR_LENGTH 20
+#define MAX_CHAR_LENGTH 16
 #define MAX_OUTPUT_STREAMS 6
+
+typedef struct stream_out_t {
+	char data0[MAX_CHAR_LENGTH];
+	char data1[MAX_CHAR_LENGTH];
+	char data2[MAX_CHAR_LENGTH];
+	char data3[MAX_CHAR_LENGTH];
+	char data4[MAX_CHAR_LENGTH];
+	char data5[MAX_CHAR_LENGTH];
+} stream_out_t;
 
 void hd44780_i2c_init(void);
 void hd44780_i2c_send_8_bit_instruction(uint8_t opcode, uint8_t instruction);
+
+void hd44780_i2c_set_stream_out(stream_out_t* stream);
+void hd44780_i2c_puts(char* string);
+void hd44780_i2c_update(stream_out_t* stream);
+void hd44780_i2c_clear(void);
+void hd44780_i2_move_cursor(uint8_t, uint8_t);
+void hd44780_i2_shift_cursor_left(void);
+void hd44780_i2_shift_cursor_right(void);
+void hd44780_i2_shift_display_left(void);
+void hd44780_i2_shift_display_right(void);
+void hd44780_i2_shift_display_up(void);
+void hd44780_i2_shift_display_down(void);
 
 #endif /* HD44780_I2C_H_ */
