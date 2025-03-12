@@ -36,6 +36,8 @@
 
 /* User defined libraries */
 
+#define I2C_DEVICE_ADDR 0x27 
+
 /* HD44780 */
 #define LINE_COUNT  0x02
 #define LINE_LENGTH 0x14
@@ -45,8 +47,8 @@
 #define	LINE4 	LINE2 + LINE_LENGTH
 #define DDRAM_ADDR 0x80
 
-#define RS_PIN       0x00
-#define RW_PIN       0x01
+#define RW_PIN       0x00
+#define RS_PIN       0x01
 #define ENABLE_PIN   0x02
 
 /* OPCODE */
@@ -58,14 +60,15 @@
 /* DISPLAY CONTROL */
 #define DISPLAY_OFF     0x08
 #define DISPLAY_ON      0x0C
-#define CURSOR_ON       0x0A    // 0b00001010 -> sets display off
-#define BLINK_ON        0x09    // 0b00001001 -> sets display off
+#define CURSOR_ON       0x0A 
+#define BLINK_ON        0x09  
 #define CLEAR_DISPLAY   0x01
 #define RETURN_HOME     0x02
-#define BUSY_FLAG		0x80	//0b10000000
+#define BUSY_FLAG		0x80
 
 /* FUNCTION SET DEFINITION (EUROPEAN ONLY) */
-#define FUNCTION_SET_4_BIT_MODE   0x28 // 4 Bit Mode, 2 Lines, 5x8 Dots, 0x20 := Only 4 Bit Set
+#define FUNCTION_SET_4_BIT_MODE_5x8    0x28 // 4 Bit Mode, 2 Lines, 5x8 Dots
+#define FUNCTION_SET_4_BIT_MODE_5x10   0x2C // 4 Bit Mode, 2 Lines, 5x10 Dots
 
 /* ENTRY MODE SET */
 #define CURSOR_DIR_LEFT_SHIFT     0x07
@@ -88,22 +91,15 @@
 
 /* Typdef for Display Output */
 #define MAX_CHAR_LENGTH 16
-#define MAX_OUTPUT_STREAMS 6
+#define MAX_OUTPUT_STREAMS 4
 
 typedef struct stream_out_t {
-	char data0[MAX_CHAR_LENGTH];
-	char data1[MAX_CHAR_LENGTH];
-	char data2[MAX_CHAR_LENGTH];
-	char data3[MAX_CHAR_LENGTH];
-	char data4[MAX_CHAR_LENGTH];
-	char data5[MAX_CHAR_LENGTH];
+	char data[MAX_OUTPUT_STREAMS][MAX_CHAR_LENGTH];
 } stream_out_t;
 
 void hd44780_i2c_init(void);
-void hd44780_i2c_send_8_bit_instruction(uint8_t opcode, uint8_t instruction);
-
-void hd44780_i2c_set_stream_out(stream_out_t* stream);
 void hd44780_i2c_puts(char* string);
+void hd44780_i2c_set_stream_out(stream_out_t* stream);
 void hd44780_i2c_update(stream_out_t* stream);
 void hd44780_i2c_clear(void);
 void hd44780_i2_move_cursor(uint8_t, uint8_t);
