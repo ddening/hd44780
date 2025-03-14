@@ -35,8 +35,7 @@
 /* General libraries */
 
 /* User defined libraries */
-
-#define I2C_DEVICE_ADDR 0x27 
+#include "i2c.h"
 
 /* HD44780 */
 #define LINE_COUNT  0x02
@@ -90,17 +89,33 @@
 #define SHIFT_DISPLAY_RIGHT 0x0C
 
 /* Typdef for Display Output */
-#define MAX_CHAR_LENGTH 16
-#define MAX_OUTPUT_STREAMS 4
+#define MAX_DISPLAY_CHAR_LENGTH 16
+#define MAX_NAME_LENGTH 8
+#define MAX_VALUE_LENGTH MAX_DISPLAY_CHAR_LENGTH - MAX_NAME_LENGTH
 
-typedef struct stream_out_t {
-	char data[MAX_OUTPUT_STREAMS][MAX_CHAR_LENGTH];
-} stream_out_t;
+// Enum for named sensor indices
+typedef enum {
+	TEMPERATURE_SENSOR,
+	HUMIDITY_SENSOR,
+	PRESSURE_SENSOR,
+	CO2_SENSOR,
+	LIGHT_SENSOR,
+	SOUND_SENSOR,
+	SENSOR_COUNT // Automatically gives total number of sensors
+} sensor_index_t;
+
+typedef struct {
+	uint8_t name[MAX_NAME_LENGTH];
+	float value;
+} sensor_t;
+
+typedef struct {
+	sensor_t sensors[SENSOR_COUNT]; // Use SENSOR_COUNT from the enum
+} sensor_data_t;
 
 void hd44780_i2c_init(void);
-void hd44780_i2c_puts(char* string);
-void hd44780_i2c_set_stream_out(stream_out_t* stream);
-void hd44780_i2c_update(stream_out_t* stream);
+void hd44780_i2c_puts(uint8_t* string);
+void hd44780_i2c_update(void);
 void hd44780_i2c_clear(void);
 void hd44780_i2_move_cursor(uint8_t, uint8_t);
 void hd44780_i2_shift_cursor_left(void);

@@ -41,7 +41,10 @@
 #include "hd44780_i2c.h"
 #include "i2c.h"
 #include "ringbuffer.h"
-#include "led_lib.h"
+#include "utils.h"
+#include "memory.h"
+
+#define I2C_DEVICE_ADDR 0x27 
 
 #define ENABLE_LATCH 0x02
 #define BACKLIGHT_ON 0x03
@@ -56,11 +59,11 @@ volatile lcd_fsm_state_t lcd_fsm_state = LCD_STATE_IDLE;
 
 static queue_t q;
 static queue_t* queue = NULL;
-static device_t* i2c_device;
-static uint8_t g_busy_flag;
-static stream_out_t g_stream; // Default stream output
-static stream_out_t* g_ptr_stream; 
-static uint8_t g_current_stream_line;
+static device_t* i2c_device = NULL;
+static uint8_t g_busy_flag = 0x00;
+static uint8_t g_sensor_index = 0;
+static sensor_data_t g_sensor_data;
+static sensor_data_t* g_ptr_sensor_data = NULL; 
 
 static void _hd44780_i2c_set_to_4bit_operation(void);
 static uint8_t* _hd44780_i2c_send_8bit_handler(uint8_t opcode, uint8_t instruction);
@@ -69,6 +72,18 @@ static void _hd44780_send_command(void);
 static void _hd44780_i2c_request_busy_flag(void* context);
 static void _hd44780_i2c_start_check_busy_flag_routine(void* context);
 static void _hd44780_timer1_init(void);
+static void _hd44780_i2c_init_sensor_data(sensor_data_t* sensor_data);
+
+/* TODO: 
+	- Accept negative values for sensor_data
+	- Export Timer into its own library
+	- Calculate OCRn values based on F_CPU and desired interrupt frequency
+	- Experiment with shift_display_left/right to shift the display up/down instead of moving_cursor and re-sending sensor_data
+	  (shift by value 0x40?)
+	- Add units to the sensor_data struct
+	- Reduce timer interrupt occurence if there's no task in the queue to ~1 Hz.
+	- (Unit Test)
+*/
 
 void hd44780_i2c_init(void) {
 	
@@ -76,17 +91,19 @@ void hd44780_i2c_init(void) {
 	
 	i2c_device = i2c_create_device(I2C_DEVICE_ADDR);
 		
-	_delay_ms(40); // Boot Time
+	_delay_ms(100); // Boot Time
 	
 	// Force 8-bit mode
 	_hd44780_i2c_send_8_bit_instruction(RWRS00, 0x30, NULL);
-	_delay_ms(4.1);
+	_delay_ms(5); 
 	_hd44780_i2c_send_8_bit_instruction(RWRS00, 0x30, NULL);
-	_delay_ms(0.1);
+	_delay_ms(1);
 	_hd44780_i2c_send_8_bit_instruction(RWRS00, 0x30, NULL);
+	_delay_ms(1);
 	
 	// Operates in 4-bit mode from here on
 	_hd44780_i2c_set_to_4bit_operation(); 
+	_delay_ms(1);
 	
 	queue_enqueue(queue, payload_create_hd44780(PRIORITY_NORMAL, RWRS00, FUNCTION_SET_4_BIT_MODE_5x8));
 	queue_enqueue(queue, payload_create_hd44780(PRIORITY_NORMAL, RWRS00, DISPLAY_OFF));
@@ -94,12 +111,11 @@ void hd44780_i2c_init(void) {
 	queue_enqueue(queue, payload_create_hd44780(PRIORITY_NORMAL, RWRS00, CURSOR_DIR_LEFT_NO_SHIFT));
 	queue_enqueue(queue, payload_create_hd44780(PRIORITY_NORMAL, RWRS00, DISPLAY_ON | CURSOR_ON | BLINK_ON));
 	
-	hd44780_i2c_set_stream_out(&g_stream);
-	hd44780_i2c_update(g_ptr_stream);
-
-	//hd44780_i2c_puts("Hallo AVR!");
-	
 	_hd44780_timer1_init();
+	
+	g_ptr_sensor_data = &g_sensor_data;
+	_hd44780_i2c_init_sensor_data(g_ptr_sensor_data);
+	hd44780_i2c_update();	
 }
 
 /*
@@ -114,22 +130,27 @@ static void _hd44780_i2c_set_to_4bit_operation(void) {
 	
 	uint8_t* data;
 	uint8_t high_nibble;
-	uint8_t low_nibble;
 	payload_t* payload;
 	
 	data = (uint8_t*)malloc(sizeof(uint8_t) * 2);
 	
+	if (data == NULL) {
+		return;
+	}
+	
 	high_nibble = 0x20 & 0xF0;
-	low_nibble = (0x20 & 0x0F) << 4;
 	
 	data[0] = high_nibble | (RWRS00 << 0) | (1 << ENABLE_LATCH) | (1 << BACKLIGHT_ON);
 	data[1] = high_nibble | (RWRS00 << 0) & ~(1 << ENABLE_LATCH) | (1 << BACKLIGHT_ON);
 
 	payload = (payload_t*)payload_create_i2c(PRIORITY_NORMAL, i2c_device, data, 2, NULL);
 	
-	if (payload == NULL || data == NULL) {
+	if (payload == NULL) {
+		free(data);
 		return;
 	}
+	
+	free(data);
 	
 	i2c_write(payload);
 }
@@ -160,15 +181,22 @@ static uint8_t* _hd44780_i2c_send_8bit_handler(uint8_t opcode, uint8_t instructi
 static void _hd44780_i2c_send_8_bit_instruction(uint8_t opcode, uint8_t instruction, callback_fn callback) {
 	
 	uint8_t* data;
-	uint8_t* payload;
+	payload_t* payload;
 	
 	data = _hd44780_i2c_send_8bit_handler(opcode, instruction);
+	
+	if (data == NULL) {
+		return NULL;
+	}
 
 	payload = (payload_t*)payload_create_i2c(PRIORITY_NORMAL, i2c_device, data, 4, callback);
 	
-	if (payload == NULL || data == NULL) {
+	if (payload == NULL) {
+		free(data);
 		return;
 	}
+	
+	free(data);
 	
 	i2c_write(payload);
 }
@@ -190,9 +218,9 @@ void _hd44780_send_command(void) {
 	
 	instruction = payload->hd44780.instruction;
 	
-	lcd_fsm_state = LCD_STATE_SEND_COMMAND;
+	payload_free_hd44780(payload);
 	
-	_hd44780_i2c_send_8_bit_instruction(opcode, instruction, _hd44780_i2c_request_busy_flag); // skip read process => _hd44780_i2c_start_check_busy_flag_routine
+	_hd44780_i2c_send_8_bit_instruction(opcode, instruction, _hd44780_i2c_start_check_busy_flag_routine); // skip read process => _hd44780_i2c_start_check_busy_flag_routine ; _hd44780_i2c_request_busy_flag
 }
 
 static void _hd44780_i2c_request_busy_flag(void* context) {
@@ -202,11 +230,18 @@ static void _hd44780_i2c_request_busy_flag(void* context) {
 	
 	data = _hd44780_i2c_send_8bit_handler(0xFF, RWRS10);
 	
+	if (data == NULL) {
+		return NULL;
+	}
+	
 	payload = payload_create_i2c(PRIORITY_NORMAL, i2c_device, data, 4, _hd44780_i2c_start_check_busy_flag_routine);
 	
-	if (payload == NULL || data == NULL) {
+	if (payload == NULL) {
+		free(data);
 		return;
 	}
+	
+	free(data);
 	
 	i2c_read(payload);
 }
@@ -219,27 +254,39 @@ static void _hd44780_i2c_start_check_busy_flag_routine(void* context) {
 	lcd_fsm_state = LCD_STATE_CHECK_BUSY;
 }
 
-void hd44780_i2c_set_stream_out(stream_out_t* stream) {
+static void _hd44780_i2c_init_sensor_data(sensor_data_t* sensor_data) {
 	
-	g_ptr_stream = stream;
-	
-	g_current_stream_line = 0;
-	
-	for (int i = 0; i < MAX_OUTPUT_STREAMS; i++) {
-		snprintf(stream->data[i], MAX_CHAR_LENGTH, "Test %d", i); // Format string safely
-	}
+	strcpy(sensor_data->sensors[TEMPERATURE_SENSOR].name, "Temperature");
+	strcpy(sensor_data->sensors[HUMIDITY_SENSOR].name, "Humidity");
+	strcpy(sensor_data->sensors[PRESSURE_SENSOR].name, "Pressure");
+	strcpy(sensor_data->sensors[CO2_SENSOR].name, "CO2");
+	strcpy(sensor_data->sensors[LIGHT_SENSOR].name, "Light"); 
+	strcpy(sensor_data->sensors[SOUND_SENSOR].name, "Sound"); 
+
+	// Example sensor values
+	sensor_data->sensors[TEMPERATURE_SENSOR].value = 22.51;
+	sensor_data->sensors[HUMIDITY_SENSOR].value = 55.3;
+	sensor_data->sensors[PRESSURE_SENSOR].value = 1031.2;
+	sensor_data->sensors[CO2_SENSOR].value = 400.0;
+	sensor_data->sensors[LIGHT_SENSOR].value = 150.0;
+	sensor_data->sensors[SOUND_SENSOR].value = 65.2;
 }
 
-void hd44780_i2c_update(stream_out_t* stream) {
+void hd44780_i2c_update(void) {
+	
+	uint8_t buffer[MAX_DISPLAY_CHAR_LENGTH];
+	uint8_t name_buffer[MAX_NAME_LENGTH];
+	uint8_t value_buffer[MAX_VALUE_LENGTH];
 	
 	hd44780_i2c_clear();
 	
-	for (uint8_t i = g_current_stream_line, j = LINE1; i < g_current_stream_line + LINE_COUNT; i++, j += 0x40) {
-		
-		if (i < MAX_OUTPUT_STREAMS) {
-					
-			hd44780_i2_move_cursor(j, 0);
-			hd44780_i2c_puts(stream->data[i]);
+	for (uint8_t sensor_index = g_sensor_index, line = LINE1; sensor_index < g_sensor_index + LINE_COUNT; sensor_index++, line += 0x40) {
+		if (sensor_index < SENSOR_COUNT) {
+			float_to_string(g_ptr_sensor_data->sensors[sensor_index].value, value_buffer, sizeof(value_buffer), 2);		
+			snprintf(name_buffer, sizeof(name_buffer), "%s", g_ptr_sensor_data->sensors[sensor_index].name);
+			snprintf(buffer, sizeof(buffer), "%s: %s", name_buffer, value_buffer);
+			hd44780_i2_move_cursor(line, 0);
+			hd44780_i2c_puts(buffer);
 		}
 	}
 }
@@ -248,8 +295,9 @@ static void _hd44780_i2c_putc(uint8_t c) {
 	queue_enqueue(queue, payload_create_hd44780(PRIORITY_NORMAL, RWRS01, c));
 }
 
-void hd44780_i2c_puts(char* string) {
-	while(*string){
+void hd44780_i2c_puts(uint8_t* string) {
+	
+	while(*string) {
 		_hd44780_i2c_putc(*string++);
 	}
 }
@@ -279,44 +327,45 @@ void hd44780_i2_shift_display_right(void) {
 }
 
 void hd44780_i2_shift_display_up(void) {
-	
-	if (g_current_stream_line == 0) {
+		
+	if (g_sensor_index == 0) {
 		return;
 	}
 	
-	g_current_stream_line -= 1;
+	g_sensor_index -= 1;
 	
-	if (g_current_stream_line < 0) {
-		g_current_stream_line = 0;
+	if (g_sensor_index < 0) {
+		g_sensor_index = 0;
 	}
 	
-	hd44780_i2c_update(g_ptr_stream);
+	hd44780_i2c_update();
 }
 
 void hd44780_i2_shift_display_down(void) {
 	
-	if (g_current_stream_line == MAX_OUTPUT_STREAMS - 1) {
+	if (g_sensor_index == SENSOR_COUNT - LINE_COUNT) {
 		return;
 	}
 	
-	g_current_stream_line += 1;
+	g_sensor_index += 1;
 	
-	if (g_current_stream_line > MAX_OUTPUT_STREAMS) {
-		g_current_stream_line = MAX_OUTPUT_STREAMS;
+	if (g_sensor_index > SENSOR_COUNT) {
+		g_sensor_index = SENSOR_COUNT;
 	}
 	
-	hd44780_i2c_update(g_ptr_stream);
+	hd44780_i2c_update();
 }
 
 static void _hd44780_timer1_init(void) {
+	
 	// Set Timer1 to CTC mode
 	TCCR3B |= (1 << WGM32);
 	
 	// Set prescaler to 1024
 	TCCR3B |= (1 << CS32) | (1 << CS30);
 
-	// Set compare match value for 120 Hz interval (assuming 10MHz clock)
-	OCR3A = 80;
+	// Set compare match value for 200 Hz interval (assuming 10MHz clock)
+	OCR3A = 47;
 
 	// Enable Timer1 Compare Match A interrupt
 	TIMSK3 |= (1 << OCIE3A);
@@ -326,18 +375,17 @@ static void _hd44780_timer1_init(void) {
 }
 
 ISR(TIMER3_COMPA_vect) {
-
-	//led_toggle(LED7);
-	
+		
 	switch(lcd_fsm_state) {
 		
 		case LCD_STATE_IDLE: {
-			
-			// Reduce timer interrupt occurence if there's no task in the queue to 1 Hz. 
+			 
 			if (queue_empty(queue)) {
-				OCR3A = 9764; // 1 Hz
+				//OCR3A = 9764; // 1 Hz
 			} else {
-				OCR3A = 80; // 120 Hz
+				//OCR3A = 161; // 120 Hz
+			
+				lcd_fsm_state = LCD_STATE_SEND_COMMAND;
 				
 				_hd44780_send_command();
 			}
@@ -346,18 +394,14 @@ ISR(TIMER3_COMPA_vect) {
 		}
 		
 		case LCD_STATE_SEND_COMMAND: {
-			
 			break;
 		}
 		
 		case LCD_STATE_CHECK_BUSY: {
 
-			if (g_busy_flag) {
+			if (g_busy_flag == 0x01) {
 				_hd44780_i2c_request_busy_flag(NULL);
-			} else {
-				
-				lcd_fsm_state = LCD_STATE_IDLE;
-								
+			} else {							
 				_hd44780_send_command();
 			}
 			
