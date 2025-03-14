@@ -38,7 +38,7 @@
 #include "uart.h"
 
 static void test_report_failure(const struct test_case* test, const char* stage, int result) {
-	uart_put("%s '%s' %s %d", "Test", test->name, "failed:", result);
+	uart_put("Test %s failed: %d", test->name, result);
 }
 
 static int test_call(int (*func)(const struct test_case*), const struct test_case* test) {
@@ -59,7 +59,7 @@ static int test_call(int (*func)(const struct test_case*), const struct test_cas
 static int test_case_run(const struct test_case* test) {
 	int result;
 	
-	uart_put("%s '%s'", "Running test:", test->name);
+	uart_put("Running test: %s", test->name);
 
 	result = test_call(test->run, test);
 	if (result) {
@@ -75,7 +75,7 @@ int test_hd44780_suite_run(const struct test_suite* suite) {
 	unsigned int i;
 	int          ret;
 
-	uart_put("%s '%s' %s", "Running test suite", suite->name, "...");
+	uart_put("Running test suite %s ...", suite->name);
 
 	for (i = 0; i < suite->nr_tests; i++) {
 		const struct test_case* test;
@@ -90,7 +90,7 @@ int test_hd44780_suite_run(const struct test_suite* suite) {
 		}
 	}
 
-	uart_put("%s '%s' %s %u %s %u %s %u %s", "Test suite", suite->name, "complete:", suite->nr_tests, "tests,", nr_failures, "failures,", nr_errors, "errors\r\n");
+	uart_put("Test suite %s complete: %u tests, %u failures, %u errors\r\n", suite->name, suite->nr_tests, nr_failures, nr_errors);
 
 	return nr_errors + nr_failures;
 }
