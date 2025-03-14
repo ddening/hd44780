@@ -25,16 +25,4 @@ void test_hd44780(void) {
     switch_init();
      
     sei();
-    
-    hd44780_init();  
-    // hd44780_move_cursor(LINE1, 0);
-    // hd44780_puts("Hello AVR");
-    
-    /* Fill Test Stream With Data */
-    //sprintf(stream_out.data0, "SENSOR00");
-    //sprintf(stream_out.data1, "SENSOR01");
-    //sprintf(stream_out.data2, "SENSOR02");
-    //sprintf(stream_out.data3, "SENSOR03");
-    //sprintf(stream_out.data4, "SENSOR04");
-    //sprintf(stream_out.data5, "SENSOR05");
 }
