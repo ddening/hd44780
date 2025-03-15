@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "hd44780.h"
+#include "hd44780_i2c.h"
 #include "suite.h"
 #include "uart.h"
 #include "led_lib.h"
@@ -13,8 +13,6 @@
 #ifndef F_CPU
 #define F_CPU 10000000UL
 #endif
-
-static stream_out_t stream_out;
 
 void test_hd44780(void) {
     
