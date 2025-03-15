@@ -105,7 +105,7 @@ typedef enum {
 } sensor_index_t;
 
 typedef struct {
-	uint8_t name[MAX_NAME_LENGTH];
+	char name[MAX_NAME_LENGTH];
 	float value;
 } sensor_t;
 
@@ -114,7 +114,7 @@ typedef struct {
 } sensor_data_t;
 
 void hd44780_i2c_init(void);
-void hd44780_i2c_puts(uint8_t* string);
+void hd44780_i2c_puts(char* string);
 void hd44780_i2c_update(void);
 void hd44780_i2c_clear(void);
 void hd44780_i2_move_cursor(uint8_t, uint8_t);

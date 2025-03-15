@@ -65,23 +65,24 @@ static uint8_t g_sensor_index = 0;
 static sensor_data_t g_sensor_data;
 static sensor_data_t* g_ptr_sensor_data = NULL; 
 
-static void _hd44780_i2c_set_to_4bit_operation(void);
+static void* _hd44780_i2c_set_to_4bit_operation(void);
 static uint8_t* _hd44780_i2c_send_8bit_handler(uint8_t opcode, uint8_t instruction);
-static void _hd44780_i2c_send_8_bit_instruction(uint8_t opcode, uint8_t instruction, callback_fn callback);
-static void _hd44780_send_command(void);
-static void _hd44780_i2c_request_busy_flag(void* context);
+static void* _hd44780_i2c_send_8_bit_instruction(uint8_t opcode, uint8_t instruction, callback_fn callback);
+static void* _hd44780_send_command(void);
+static void* _hd44780_i2c_request_busy_flag(void* context);
 static void _hd44780_i2c_start_check_busy_flag_routine(void* context);
 static void _hd44780_timer1_init(void);
 static void _hd44780_i2c_init_sensor_data(sensor_data_t* sensor_data);
 
 /* TODO: 
 	- Accept negative values for sensor_data
+	- Send entire dataword in one task instead of creating several i2c task for each letter
+	- Check if queue is full before inserting a task
+	- Add LCD_STATE_PREPARE_COMMAND
+	- Use Timer instead of polling the queue every ms
 	- Export Timer into its own library
 	- Calculate OCRn values based on F_CPU and desired interrupt frequency
-	- Experiment with shift_display_left/right to shift the display up/down instead of moving_cursor and re-sending sensor_data
-	  (shift by value 0x40?)
 	- Add units to the sensor_data struct
-	- Reduce timer interrupt occurence if there's no task in the queue to ~1 Hz.
 	- (Unit Test)
 */
 
@@ -126,7 +127,7 @@ void hd44780_i2c_init(void) {
 	> Sets to 4-bit operation. In this case, operation is handled as 8 bits by initialization, 
 	> and only this instruction completes with one write.
 */
-static void _hd44780_i2c_set_to_4bit_operation(void) {
+static void* _hd44780_i2c_set_to_4bit_operation(void) {
 	
 	uint8_t* data;
 	uint8_t high_nibble;
@@ -135,24 +136,26 @@ static void _hd44780_i2c_set_to_4bit_operation(void) {
 	data = (uint8_t*)malloc(sizeof(uint8_t) * 2);
 	
 	if (data == NULL) {
-		return;
+		return NULL;
 	}
 	
 	high_nibble = 0x20 & 0xF0;
 	
-	data[0] = high_nibble | (RWRS00 << 0) | (1 << ENABLE_LATCH) | (1 << BACKLIGHT_ON);
-	data[1] = high_nibble | (RWRS00 << 0) & ~(1 << ENABLE_LATCH) | (1 << BACKLIGHT_ON);
+	data[0] = (high_nibble | (RWRS00 << 0) | (1 << BACKLIGHT_ON)| (1 << ENABLE_LATCH));
+	data[1] = (high_nibble | (RWRS00 << 0) | (1 << BACKLIGHT_ON)) & ~(1 << ENABLE_LATCH);
 
 	payload = (payload_t*)payload_create_i2c(PRIORITY_NORMAL, i2c_device, data, 2, NULL);
 	
 	if (payload == NULL) {
 		free(data);
-		return;
+		return NULL;
 	}
 	
 	free(data);
 	
 	i2c_write(payload);
+	
+	return NULL;
 }
 
 static uint8_t* _hd44780_i2c_send_8bit_handler(uint8_t opcode, uint8_t instruction) {
@@ -170,15 +173,15 @@ static uint8_t* _hd44780_i2c_send_8bit_handler(uint8_t opcode, uint8_t instructi
 	high_nibble = instruction & 0xF0;
 	low_nibble = (instruction & 0x0F) << 4;
 	
-	data[0] = high_nibble | (opcode << 0) | (1 << ENABLE_LATCH) | (1 << BACKLIGHT_ON);
-	data[1] = high_nibble | (opcode << 0) & ~(1 << ENABLE_LATCH) | (1 << BACKLIGHT_ON);
-	data[2] = low_nibble  | (opcode << 0) | (1 << ENABLE_LATCH) | (1 << BACKLIGHT_ON);
-	data[3] = low_nibble  | (opcode << 0) & ~(1 << ENABLE_LATCH) | (1 << BACKLIGHT_ON);
+	data[0] = (high_nibble | (opcode << 0) | (1 << BACKLIGHT_ON) | (1 << ENABLE_LATCH));
+	data[1] = (high_nibble | (opcode << 0) | (1 << BACKLIGHT_ON)) & ~(1 << ENABLE_LATCH);
+	data[2] = (low_nibble  | (opcode << 0) | (1 << BACKLIGHT_ON) | (1 << ENABLE_LATCH));
+	data[3] = (low_nibble  | (opcode << 0) | (1 << BACKLIGHT_ON)) & ~(1 << ENABLE_LATCH);
 	
 	return data;
 }
 
-static void _hd44780_i2c_send_8_bit_instruction(uint8_t opcode, uint8_t instruction, callback_fn callback) {
+static void* _hd44780_i2c_send_8_bit_instruction(uint8_t opcode, uint8_t instruction, callback_fn callback) {
 	
 	uint8_t* data;
 	payload_t* payload;
@@ -193,15 +196,17 @@ static void _hd44780_i2c_send_8_bit_instruction(uint8_t opcode, uint8_t instruct
 	
 	if (payload == NULL) {
 		free(data);
-		return;
+		return NULL;
 	}
 	
 	free(data);
 	
 	i2c_write(payload);
+	
+	return NULL;
 }
 
-void _hd44780_send_command(void) {
+void* _hd44780_send_command(void) {
 	
 	uint8_t opcode;
 	uint8_t instruction;
@@ -211,7 +216,7 @@ void _hd44780_send_command(void) {
 	
 	if (payload == NULL) {
 		lcd_fsm_state = LCD_STATE_IDLE;
-		return;
+		return NULL;
 	}
 	
 	opcode = payload->hd44780.opcode;
@@ -221,9 +226,11 @@ void _hd44780_send_command(void) {
 	payload_free_hd44780(payload);
 	
 	_hd44780_i2c_send_8_bit_instruction(opcode, instruction, _hd44780_i2c_start_check_busy_flag_routine); // skip read process => _hd44780_i2c_start_check_busy_flag_routine ; _hd44780_i2c_request_busy_flag
+	
+	return NULL;
 }
 
-static void _hd44780_i2c_request_busy_flag(void* context) {
+static void* _hd44780_i2c_request_busy_flag(void* context) {
 
 	uint8_t* data;
 	payload_t* payload;
@@ -238,12 +245,14 @@ static void _hd44780_i2c_request_busy_flag(void* context) {
 	
 	if (payload == NULL) {
 		free(data);
-		return;
+		return NULL;
 	}
 	
 	free(data);
 	
 	i2c_read(payload);
+	
+	return NULL;
 }
 
 static void _hd44780_i2c_start_check_busy_flag_routine(void* context) {
@@ -274,9 +283,9 @@ static void _hd44780_i2c_init_sensor_data(sensor_data_t* sensor_data) {
 
 void hd44780_i2c_update(void) {
 	
-	uint8_t buffer[MAX_DISPLAY_CHAR_LENGTH];
-	uint8_t name_buffer[MAX_NAME_LENGTH];
-	uint8_t value_buffer[MAX_VALUE_LENGTH];
+	char buffer[MAX_DISPLAY_CHAR_LENGTH];
+	char name_buffer[MAX_NAME_LENGTH];
+	char value_buffer[MAX_VALUE_LENGTH];
 	
 	hd44780_i2c_clear();
 	
@@ -291,11 +300,11 @@ void hd44780_i2c_update(void) {
 	}
 }
 
-static void _hd44780_i2c_putc(uint8_t c) {
+static void _hd44780_i2c_putc(char c) {
 	queue_enqueue(queue, payload_create_hd44780(PRIORITY_NORMAL, RWRS01, c));
 }
 
-void hd44780_i2c_puts(uint8_t* string) {
+void hd44780_i2c_puts(char* string) {
 	
 	while(*string) {
 		_hd44780_i2c_putc(*string++);
@@ -381,9 +390,9 @@ ISR(TIMER3_COMPA_vect) {
 		case LCD_STATE_IDLE: {
 			 
 			if (queue_empty(queue)) {
-				//OCR3A = 9764; // 1 Hz
+				//OCR3A = 1952; // 1 Hz
 			} else {
-				//OCR3A = 161; // 120 Hz
+				//OCR3A = 47; // 120 Hz
 			
 				lcd_fsm_state = LCD_STATE_SEND_COMMAND;
 				
