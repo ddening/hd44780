@@ -75,7 +75,6 @@ static void _hd44780_timer1_init(void);
 static void _hd44780_i2c_init_sensor_data(sensor_data_t* sensor_data);
 
 /* TODO: 
-	- Accept negative values for sensor_data
 	- Send entire dataword in one task instead of creating several i2c task for each letter
 	- Check if queue is full before inserting a task
 	- Add LCD_STATE_PREPARE_COMMAND
@@ -273,8 +272,8 @@ static void _hd44780_i2c_init_sensor_data(sensor_data_t* sensor_data) {
 	strcpy(sensor_data->sensors[SOUND_SENSOR].name, "Sound"); 
 
 	// Example sensor values
-	sensor_data->sensors[TEMPERATURE_SENSOR].value = 22.51;
-	sensor_data->sensors[HUMIDITY_SENSOR].value = 55.3;
+	sensor_data->sensors[TEMPERATURE_SENSOR].value = -22.05;
+	sensor_data->sensors[HUMIDITY_SENSOR].value = 55.31;
 	sensor_data->sensors[PRESSURE_SENSOR].value = 1031.2;
 	sensor_data->sensors[CO2_SENSOR].value = 400.0;
 	sensor_data->sensors[LIGHT_SENSOR].value = 150.0;
@@ -390,9 +389,9 @@ ISR(TIMER3_COMPA_vect) {
 		case LCD_STATE_IDLE: {
 			 
 			if (queue_empty(queue)) {
-				//OCR3A = 1952; // 1 Hz
+				OCR3A = 1952; // 1 Hz
 			} else {
-				//OCR3A = 47; // 120 Hz
+				OCR3A = 47; // 120 Hz
 			
 				lcd_fsm_state = LCD_STATE_SEND_COMMAND;
 				

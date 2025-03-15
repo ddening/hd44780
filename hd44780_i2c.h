@@ -89,9 +89,9 @@
 #define SHIFT_DISPLAY_RIGHT 0x0C
 
 /* Typdef for Display Output */
-#define MAX_DISPLAY_CHAR_LENGTH 16
-#define MAX_NAME_LENGTH 8
-#define MAX_VALUE_LENGTH MAX_DISPLAY_CHAR_LENGTH - MAX_NAME_LENGTH
+#define MAX_DISPLAY_CHAR_LENGTH 15
+#define MAX_NAME_LENGTH 6
+#define MAX_VALUE_LENGTH 9//MAX_DISPLAY_CHAR_LENGTH - MAX_NAME_LENGTH
 
 // Enum for named sensor indices
 typedef enum {
