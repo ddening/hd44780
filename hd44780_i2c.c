@@ -82,10 +82,7 @@ static void _hd44780_i2c_stop_timer(void);
 /* TODO: 
 	- Calculate OCRn values based on F_CPU and desired interrupt frequency
 	- Add units to the sensor_data struct
-	- Send entire dataword in one task instead of creating several i2c task for each letter
-	- Check if queue is full before inserting a task
-	- Get Busy Flag, TWDR & 0x80, LCD always responds with 0x80 (Busy)
-	- (Unit Test)
+	- Set sensor value function ... set["Temperature"].value = 200
 */
 
 void hd44780_i2c_init(void) {
@@ -291,6 +288,10 @@ static void _hd44780_i2c_init_sensor_data(sensor_data_t* sensor_data) {
 	sensor_data->sensors[CO2_SENSOR].value = 400.0;
 	sensor_data->sensors[LIGHT_SENSOR].value = 150.0;
 	sensor_data->sensors[SOUND_SENSOR].value = 65.2;
+}
+
+void hd44780_i2c_set_sensor_data(sensor_index_t sensor, float value) {
+	_sensor_data.sensors[sensor].value = value;
 }
 
 void hd44780_i2c_update(void) {

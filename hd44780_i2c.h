@@ -124,5 +124,6 @@ void hd44780_i2_shift_display_left(void);
 void hd44780_i2_shift_display_right(void);
 void hd44780_i2_shift_display_up(void);
 void hd44780_i2_shift_display_down(void);
+void hd44780_i2c_set_sensor_data(sensor_index_t sensor, float value);
 
 #endif /* HD44780_I2C_H_ */
