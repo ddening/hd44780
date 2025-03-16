@@ -33,6 +33,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
@@ -43,8 +44,6 @@
 #include "ringbuffer.h"
 #include "utils.h"
 #include "memory.h"
-
-#define I2C_DEVICE_ADDR 0x27 
 
 #define ENABLE_LATCH 0x02
 #define BACKLIGHT_ON 0x03
@@ -79,15 +78,6 @@ static void _hd44780_i2c_timer_init(void);
 static void _hd44780_i2c_start_timer(void);
 static void _hd44780_i2c_stop_timer(void);
 
-/* TODO: 
-	- Calculate OCRn values based on F_CPU and desired interrupt frequency
-	- Add units to the sensor_data struct
-	- Send entire dataword in one task instead of creating several i2c task for each letter
-	- Check if queue is full before inserting a task
-	- Get Busy Flag, TWDR & 0x80, LCD always responds with 0x80 (Busy)
-	- (Unit Test)
-*/
-
 void hd44780_i2c_init(void) {
 	
 	_delay_ms(100); // Boot Time
@@ -119,7 +109,7 @@ void hd44780_i2c_init(void) {
 	queue_enqueue(queue, payload_create_hd44780(PRIORITY_NORMAL, RWRS00, DISPLAY_OFF));
 	queue_enqueue(queue, payload_create_hd44780(PRIORITY_NORMAL, RWRS00, CLEAR_DISPLAY));
 	queue_enqueue(queue, payload_create_hd44780(PRIORITY_NORMAL, RWRS00, CURSOR_DIR_LEFT_NO_SHIFT));
-	queue_enqueue(queue, payload_create_hd44780(PRIORITY_NORMAL, RWRS00, DISPLAY_ON | CURSOR_ON | BLINK_ON));
+	queue_enqueue(queue, payload_create_hd44780(PRIORITY_NORMAL, RWRS00, DISPLAY_ON));
 	
 	hd44780_i2c_update();	
 	
@@ -128,7 +118,7 @@ void hd44780_i2c_init(void) {
 
 /*
 	In order to set the HD44780 into 4-bit mode we need to send a single 8-bit command with only
-	one write operation. The other fun
+	one write operation.
 
 	HD44780 Datasheet Table 12:
 	> Sets to 4-bit operation. In this case, operation is handled as 8 bits by initialization, 
@@ -283,6 +273,13 @@ static void _hd44780_i2c_init_sensor_data(sensor_data_t* sensor_data) {
 	strcpy(sensor_data->sensors[CO2_SENSOR].name, "CO2");
 	strcpy(sensor_data->sensors[LIGHT_SENSOR].name, "Light"); 
 	strcpy(sensor_data->sensors[SOUND_SENSOR].name, "Sound"); 
+	
+	strcpy(sensor_data->sensors[TEMPERATURE_SENSOR].unit, "C");
+	strcpy(sensor_data->sensors[HUMIDITY_SENSOR].unit, "%");
+	strcpy(sensor_data->sensors[PRESSURE_SENSOR].unit, "Pa");
+	strcpy(sensor_data->sensors[CO2_SENSOR].unit, "ppm");
+	strcpy(sensor_data->sensors[LIGHT_SENSOR].unit, "lx");
+	strcpy(sensor_data->sensors[SOUND_SENSOR].unit, "dB");
 
 	// Example sensor values
 	sensor_data->sensors[TEMPERATURE_SENSOR].value = -22.05;
@@ -293,19 +290,34 @@ static void _hd44780_i2c_init_sensor_data(sensor_data_t* sensor_data) {
 	sensor_data->sensors[SOUND_SENSOR].value = 65.2;
 }
 
+void hd44780_i2c_set_sensor_data(sensor_index_t sensor, float value) {
+	_sensor_data.sensors[sensor].value = value;
+}
+
 void hd44780_i2c_update(void) {
-	
-	char buffer[MAX_DISPLAY_CHAR_LENGTH];
-	char name_buffer[MAX_NAME_LENGTH];
-	char value_buffer[MAX_VALUE_LENGTH];
+	char buffer[MAX_DISPLAY_CHAR_LENGTH + 1]; // +1 for null terminator
+	char name_buffer[MAX_DISPLAY_CHAR_LENGTH + 1];
+	char unit_buffer[MAX_DISPLAY_CHAR_LENGTH + 1];
+	char value_buffer[MAX_DISPLAY_CHAR_LENGTH + 1];
 	
 	hd44780_i2c_clear();
-	
-	for (uint8_t sensor_index = _sensor_index, line = LINE1; sensor_index < _sensor_index + LINE_COUNT; sensor_index++, line += 0x40) {
+
+	for (uint8_t sensor_index = _sensor_index, line = LINE1; 
+		 sensor_index < _sensor_index + LINE_COUNT; 
+		 sensor_index++, line += 0x40) {
+		
 		if (sensor_index < SENSOR_COUNT) {
-			float_to_string(_ptr_sensor_data->sensors[sensor_index].value, value_buffer, sizeof(value_buffer), 2);		
-			snprintf(name_buffer, sizeof(name_buffer), "%s", _ptr_sensor_data->sensors[sensor_index].name);
-			snprintf(buffer, sizeof(buffer), "%s: %s", name_buffer, value_buffer);
+			// Convert float to string with 2 decimal places
+			size_t value_size = float_to_string(_ptr_sensor_data->sensors[sensor_index].value, value_buffer, sizeof(value_buffer), 2);
+			
+			// Calculate max allowed length for name
+			size_t unit_size = strlen(_ptr_sensor_data->sensors[sensor_index].unit);
+			size_t available_name_length =  MAX_DISPLAY_CHAR_LENGTH - (value_size + unit_size + 2); // +2 accounts for the colon(:) and space() in the final format
+			
+			snprintf(unit_buffer, sizeof(unit_buffer), "%s", _ptr_sensor_data->sensors[sensor_index].unit);
+			snprintf(name_buffer, available_name_length + 1, "%s", _ptr_sensor_data->sensors[sensor_index].name);
+			snprintf(buffer, sizeof(buffer), "%s:%s %s", name_buffer, value_buffer, unit_buffer);
+			
 			hd44780_i2_move_cursor(line, 0);
 			hd44780_i2c_puts(buffer);
 		}

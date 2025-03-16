@@ -37,6 +37,8 @@
 /* User defined libraries */
 #include "i2c.h"
 
+#define I2C_DEVICE_ADDR 0x27 
+
 /* HD44780 */
 #define LINE_COUNT  0x02
 #define LINE_LENGTH 0x14
@@ -89,9 +91,7 @@
 #define SHIFT_DISPLAY_RIGHT 0x0C
 
 /* Typdef for Display Output */
-#define MAX_DISPLAY_CHAR_LENGTH 15
-#define MAX_NAME_LENGTH 6
-#define MAX_VALUE_LENGTH 9//MAX_DISPLAY_CHAR_LENGTH - MAX_NAME_LENGTH
+#define MAX_DISPLAY_CHAR_LENGTH 16
 
 // Enum for named sensor indices
 typedef enum {
@@ -105,7 +105,8 @@ typedef enum {
 } sensor_index_t;
 
 typedef struct {
-	char name[MAX_NAME_LENGTH];
+	char name[MAX_DISPLAY_CHAR_LENGTH];
+	char unit[MAX_DISPLAY_CHAR_LENGTH];
 	float value;
 } sensor_t;
 
@@ -124,5 +125,6 @@ void hd44780_i2_shift_display_left(void);
 void hd44780_i2_shift_display_right(void);
 void hd44780_i2_shift_display_up(void);
 void hd44780_i2_shift_display_down(void);
+void hd44780_i2c_set_sensor_data(sensor_index_t sensor, float value);
 
 #endif /* HD44780_I2C_H_ */
