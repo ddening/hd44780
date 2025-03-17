@@ -19,7 +19,8 @@ This library provides an interrupt-driven I2C interface to control an HD44780 LC
 
 ## Dependencies
 
-Ensure you have the following libraries in your project:
+Ensure you have the following libraries in your project. 
+All required dependency files can be found in the following repository: [libAVR - Required Dependencies](https://github.com/ddening/libAVR)
 
 - `i2c.c/h` (I2C driver)
 - `ringbuffer.c/h` (Queue management)
