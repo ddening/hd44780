@@ -66,12 +66,12 @@ static uint8_t _sensor_index = 0;
 static sensor_data_t _sensor_data;
 static sensor_data_t* _ptr_sensor_data = NULL; 
 
-static void* _hd44780_i2c_set_to_4bit_operation(void);
+static void _hd44780_i2c_set_to_4bit_operation(void);
 static uint8_t* _hd44780_i2c_send_8bit_handler(uint8_t opcode, uint8_t instruction);
-static void* _hd44780_i2c_send_8_bit_instruction(uint8_t opcode, uint8_t instruction, callback_fn callback);
+static void _hd44780_i2c_send_8_bit_instruction(uint8_t opcode, uint8_t instruction, callback_fn callback);
 static payload_t* _hd44780_prepare_command(void);
-static void* _hd44780_send_command(payload_t* payload);
-static void* _hd44780_i2c_request_busy_flag(void* context);
+static void _hd44780_send_command(payload_t* payload);
+static void _hd44780_i2c_request_busy_flag(void* context);
 static void _hd44780_i2c_update_busy_flag(void* context);
 static void _hd44780_i2c_init_sensor_data(sensor_data_t* sensor_data);
 static void _hd44780_i2c_timer_init(void);
@@ -124,7 +124,7 @@ void hd44780_i2c_init(void) {
 	> Sets to 4-bit operation. In this case, operation is handled as 8 bits by initialization, 
 	> and only this instruction completes with one write.
 */
-static void* _hd44780_i2c_set_to_4bit_operation(void) {
+static void _hd44780_i2c_set_to_4bit_operation(void) {
 	
 	uint8_t* data;
 	uint8_t high_nibble;
@@ -133,7 +133,7 @@ static void* _hd44780_i2c_set_to_4bit_operation(void) {
 	data = (uint8_t*)malloc(sizeof(uint8_t) * 2);
 	
 	if (data == NULL) {
-		return NULL;
+		return;
 	}
 	
 	high_nibble = 0x20 & 0xF0;
@@ -151,8 +151,6 @@ static void* _hd44780_i2c_set_to_4bit_operation(void) {
 	free(data);
 	
 	i2c_write(payload);
-	
-	return NULL;
 }
 
 static uint8_t* _hd44780_i2c_send_8bit_handler(uint8_t opcode, uint8_t instruction) {
@@ -178,7 +176,7 @@ static uint8_t* _hd44780_i2c_send_8bit_handler(uint8_t opcode, uint8_t instructi
 	return data;
 }
 
-static void* _hd44780_i2c_send_8_bit_instruction(uint8_t opcode, uint8_t instruction, callback_fn callback) {
+static void _hd44780_i2c_send_8_bit_instruction(uint8_t opcode, uint8_t instruction, callback_fn callback) {
 	
 	uint8_t* data;
 	payload_t* payload;
@@ -186,21 +184,19 @@ static void* _hd44780_i2c_send_8_bit_instruction(uint8_t opcode, uint8_t instruc
 	data = _hd44780_i2c_send_8bit_handler(opcode, instruction);
 	
 	if (data == NULL) {
-		return NULL;
+		return;
 	}
 
 	payload = (payload_t*)payload_create_i2c(PRIORITY_NORMAL, _i2c_device, data, 4, callback);
 	
 	if (payload == NULL) {
 		free(data);
-		return NULL;
+		return;
 	}
 	
 	free(data);
 	
 	i2c_write(payload);
-	
-	return NULL;
 }
 
 static payload_t* _hd44780_prepare_command(void) {
@@ -216,7 +212,7 @@ static payload_t* _hd44780_prepare_command(void) {
 	return payload;
 }
 
-static void* _hd44780_send_command(payload_t* payload) {
+static void _hd44780_send_command(payload_t* payload) {
 	
 	uint8_t opcode;
 	uint8_t instruction;
@@ -228,11 +224,9 @@ static void* _hd44780_send_command(payload_t* payload) {
 	payload_free_hd44780(payload);
 	
 	_hd44780_i2c_send_8_bit_instruction(opcode, instruction, NULL); // skip read process => _hd44780_i2c_start_check_busy_flag_routine ; _hd44780_i2c_request_busy_flag
-	
-	return NULL;
 }
 
-static void* _hd44780_i2c_request_busy_flag(void* context) {
+static void _hd44780_i2c_request_busy_flag(void* context) {
 
 	uint8_t* data;
 	payload_t* payload;
@@ -240,21 +234,19 @@ static void* _hd44780_i2c_request_busy_flag(void* context) {
 	data = _hd44780_i2c_send_8bit_handler(0xFF, RWRS10);
 	
 	if (data == NULL) {
-		return NULL;
+		return;
 	}
 	
 	payload = payload_create_i2c(PRIORITY_NORMAL, _i2c_device, data, 4, _hd44780_i2c_update_busy_flag);
 	
 	if (payload == NULL) {
 		free(data);
-		return NULL;
+		return;
 	}
 	
 	free(data);
 	
 	i2c_read(payload);
-	
-	return NULL;
 }
 
 static void _hd44780_i2c_update_busy_flag(void* context) {
@@ -318,7 +310,7 @@ void hd44780_i2c_update(void) {
 			snprintf(name_buffer, available_name_length + 1, "%s", _ptr_sensor_data->sensors[sensor_index].name);
 			snprintf(buffer, sizeof(buffer), "%s:%s %s", name_buffer, value_buffer, unit_buffer);
 			
-			hd44780_i2_move_cursor(line, 0);
+			hd44780_i2c_move_cursor(line, 0);
 			hd44780_i2c_puts(buffer);
 		}
 	}
