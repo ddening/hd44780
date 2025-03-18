@@ -1,5 +1,5 @@
 /*************************************************************************
-* Title		: hd44780_i2c.h
+* Title		: hd44780.h
 * Author	: Dimitri Dening
 * Created	: 08.03.2025 22:07:18
 * Software	: Microchip Studio V7
@@ -29,15 +29,12 @@
 *
 *************************************************************************/
 
-#ifndef HD44780_I2C_H_
-#define HD44780_I2C_H_
+#ifndef HD44780_H_
+#define HD44780_H_
 
 /* General libraries */
 
 /* User defined libraries */
-#include "i2c.h"
-
-#define I2C_DEVICE_ADDR 0x27 
 
 /* HD44780 */
 #define LINE_COUNT  0x02
@@ -48,9 +45,16 @@
 #define	LINE4 	LINE2 + LINE_LENGTH
 #define DDRAM_ADDR 0x80
 
-#define RW_PIN       0x00
-#define RS_PIN       0x01
-#define ENABLE_PIN   0x02
+#define DISPLAY_DDR		DDRC
+#define DISPLAY_PORT	PORTC
+#define RS_PIN			PINC0
+#define RW_PIN			PINC1
+#define ENABLE_PIN		PINC2
+#define BACKLIGHT_PIN	PINC3
+#define DB4				PINC4
+#define DB5				PINC5
+#define DB6				PINC6
+#define DB7				PINC7
 
 /* OPCODE */
 #define RWRS00 0x00
@@ -114,17 +118,17 @@ typedef struct {
 	sensor_t sensors[SENSOR_COUNT]; // Use SENSOR_COUNT from the enum
 } sensor_data_t;
 
-void hd44780_i2c_init(void);
-void hd44780_i2c_puts(char* string);
-void hd44780_i2c_update(void);
-void hd44780_i2c_clear(void);
-void hd44780_i2c_move_cursor(uint8_t, uint8_t);
-void hd44780_i2c_shift_cursor_left(void);
-void hd44780_i2c_shift_cursor_right(void);
-void hd44780_i2c_shift_display_left(void);
-void hd44780_i2c_shift_display_right(void);
-void hd44780_i2c_shift_display_up(void);
-void hd44780_i2c_shift_display_down(void);
-void hd44780_i2c_set_sensor_data(sensor_index_t sensor, float value);
+void hd44780_init(void);
+void hd44780_puts(char* string);
+void hd44780_update(void);
+void hd44780_clear(void);
+void hd44780_move_cursor(uint8_t, uint8_t);
+void hd44780_shift_cursor_left(void);
+void hd44780_shift_cursor_right(void);
+void hd44780_shift_display_left(void);
+void hd44780_shift_display_right(void);
+void hd44780_shift_display_up(void);
+void hd44780_shift_display_down(void);
+void hd44780_set_sensor_data(sensor_index_t sensor, float value);
 
-#endif /* HD44780_I2C_H_ */
+#endif /* HD44780_H_ */
