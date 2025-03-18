@@ -118,13 +118,13 @@ void hd44780_i2c_init(void);
 void hd44780_i2c_puts(char* string);
 void hd44780_i2c_update(void);
 void hd44780_i2c_clear(void);
-void hd44780_i2_move_cursor(uint8_t, uint8_t);
-void hd44780_i2_shift_cursor_left(void);
-void hd44780_i2_shift_cursor_right(void);
-void hd44780_i2_shift_display_left(void);
-void hd44780_i2_shift_display_right(void);
-void hd44780_i2_shift_display_up(void);
-void hd44780_i2_shift_display_down(void);
+void hd44780_i2c_move_cursor(uint8_t, uint8_t);
+void hd44780_i2c_shift_cursor_left(void);
+void hd44780_i2c_shift_cursor_right(void);
+void hd44780_i2c_shift_display_left(void);
+void hd44780_i2c_shift_display_right(void);
+void hd44780_i2c_shift_display_up(void);
+void hd44780_i2c_shift_display_down(void);
 void hd44780_i2c_set_sensor_data(sensor_index_t sensor, float value);
 
 #endif /* HD44780_I2C_H_ */

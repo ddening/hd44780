@@ -341,32 +341,32 @@ void hd44780_i2c_clear(void) {
 	_hd44780_i2c_start_timer();
 }
 
-void hd44780_i2_move_cursor(uint8_t line, uint8_t offset) {
+void hd44780_i2c_move_cursor(uint8_t line, uint8_t offset) {
 	queue_enqueue(queue, payload_create_hd44780(PRIORITY_NORMAL, RWRS00, DDRAM_ADDR + line + offset));
 	_hd44780_i2c_start_timer();
 }
 
-void hd44780_i2_shift_cursor_left(void) {
+void hd44780_i2c_shift_cursor_left(void) {
 	queue_enqueue(queue, payload_create_hd44780(PRIORITY_NORMAL, RWRS00, SHIFT_INSTRUCTION | SHIFT_CURSOR_LEFT));
 	_hd44780_i2c_start_timer();
 }
 
-void hd44780_i2_shift_cursor_right(void) {
+void hd44780_i2c_shift_cursor_right(void) {
 	queue_enqueue(queue, payload_create_hd44780(PRIORITY_NORMAL, RWRS00, SHIFT_INSTRUCTION | SHIFT_CURSOR_RIGHT));
 	_hd44780_i2c_start_timer();
 }
 
-void hd44780_i2_shift_display_left(void) {
+void hd44780_i2c_shift_display_left(void) {
 	queue_enqueue(queue, payload_create_hd44780(PRIORITY_NORMAL, RWRS00, SHIFT_INSTRUCTION | SHIFT_DISPLAY_LEFT));
 	_hd44780_i2c_start_timer();
 }
 
-void hd44780_i2_shift_display_right(void) {
+void hd44780_i2c_shift_display_right(void) {
 	queue_enqueue(queue, payload_create_hd44780(PRIORITY_NORMAL, RWRS00, SHIFT_INSTRUCTION | SHIFT_DISPLAY_RIGHT));
 	_hd44780_i2c_start_timer();
 }
 
-void hd44780_i2_shift_display_up(void) {
+void hd44780_i2c_shift_display_up(void) {
 		
 	if (_sensor_index == 0) {
 		return;
@@ -381,7 +381,7 @@ void hd44780_i2_shift_display_up(void) {
 	hd44780_i2c_update();
 }
 
-void hd44780_i2_shift_display_down(void) {
+void hd44780_i2c_shift_display_down(void) {
 		
 	if (_sensor_index == SENSOR_COUNT - LINE_COUNT) {
 		return;
